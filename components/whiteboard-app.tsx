@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Whiteboard, type Tool, type WhiteboardDocument, type WhiteboardHandle } from "@/components/whiteboard"
 import type { Student } from "@/lib/db/schema"
 import {
+  ChevronDown,
   Eraser,
   Highlighter,
   History,
@@ -66,6 +67,7 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     editing: null,
   })
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [controlsOpen, setControlsOpen] = useState(true)
 
   const boardRef = useRef<WhiteboardHandle>(null)
   const dirtyRef = useRef(false)
@@ -260,11 +262,42 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
       </header>
 
       {/* Controls */}
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-border bg-card px-4 py-2.5">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="student" className="text-xs font-medium text-muted-foreground">
-            Student
-          </label>
+      <div className="border-b border-border bg-card">
+        <div className="flex items-center gap-2 px-4 py-2">
+          <button
+            type="button"
+            onClick={() => setControlsOpen((v) => !v)}
+            aria-expanded={controlsOpen}
+            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-card-foreground transition hover:bg-muted"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${controlsOpen ? "" : "-rotate-90"}`}
+            />
+            Lesson details
+          </button>
+          {!controlsOpen && (
+            <span className="truncate text-xs text-muted-foreground">
+              {selectedStudent ? selectedStudent.name : "No student"}
+              {" · "}
+              {formatDisplayDate(date)}
+              {subject ? ` · ${subject}` : ""}
+              {topic ? ` · ${topic}` : ""}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {noteExists && status === "saved" && (
+              <span className="text-xs text-muted-foreground">Loaded saved notes</span>
+            )}
+            <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+          </div>
+        </div>
+
+        {controlsOpen && (
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-4 pb-2.5">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="student" className="text-xs font-medium text-muted-foreground">
+                Student
+              </label>
           <div className="flex items-center gap-1.5">
             <select
               id="student"
@@ -351,12 +384,8 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          {noteExists && status === "saved" && (
-            <span className="text-xs text-muted-foreground">Loaded saved notes</span>
-          )}
-          <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Toolbar */}
