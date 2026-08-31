@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Teacher Whiteboard',
+  description: 'A simple whiteboard for teachers to write, draw, and save class notes per student and date.',
   generator: 'v0.app',
   icons: {
     icon: [
