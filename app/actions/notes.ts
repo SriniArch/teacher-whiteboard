@@ -83,3 +83,20 @@ export async function deleteNote(id: number) {
   await db.delete(classNotes).where(eq(classNotes.id, id))
   revalidatePath("/")
 }
+
+// Full note payloads for the local-first sync engine (pull step).
+export async function getAllNotes() {
+  return db
+    .select({
+      id: classNotes.id,
+      studentId: classNotes.studentId,
+      date: classNotes.date,
+      subject: classNotes.subject,
+      topic: classNotes.topic,
+      description: classNotes.description,
+      whiteboardData: classNotes.whiteboardData,
+      updatedAt: classNotes.updatedAt,
+    })
+    .from(classNotes)
+    .orderBy(desc(classNotes.date))
+}
