@@ -13,3 +13,15 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
+
+node_modules/
+dist/
+build/
+.next/
+coverage/
+.cache/
+tmp/
+logs/
+*.log
+.env
+.env.*
