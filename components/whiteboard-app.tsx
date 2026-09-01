@@ -479,13 +479,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
             onHistoryChange={setHistory}
           />
         </div>
-        {selectedId == null && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="rounded-md bg-card/90 px-4 py-2 text-sm text-muted-foreground shadow-sm">
-              Select or add a student to begin. You can draw now; pick a student before saving.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Footer status */}

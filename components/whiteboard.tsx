@@ -1,6 +1,10 @@
 "use client"
 
 import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   forwardRef,
   useCallback,
   useEffect,
@@ -12,6 +16,8 @@ import {
 export type Tool = "pen" | "highlighter" | "eraser" | "text"
 
 type Point = { x: number; y: number }
+
+type ClientPointEvent = { clientX: number; clientY: number }
 
 type StrokeElement = {
   type: "stroke"
@@ -31,6 +37,8 @@ type TextElement = {
 }
 
 type Element = StrokeElement | TextElement
+
+type TextEditorState = { x: number; y: number; value: string }
 
 export type WhiteboardDocument = {
   version: 1
@@ -65,6 +73,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const textEditorRef = useRef<HTMLTextAreaElement>(null)
 
   // Persistent drawing state (kept in refs so pointer handlers stay stable).
   const elementsRef = useRef<Element[]>([])
@@ -80,7 +89,21 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
   colorRef.current = color
   sizeRef.current = size
 
-  const [textEditor, setTextEditor] = useState<{ x: number; y: number; value: string } | null>(null)
+  const [textEditor, setTextEditor] = useState<TextEditorState | null>(null)
+
+  useEffect(() => {
+    if (!textEditor) return
+
+    const id = requestAnimationFrame(() => {
+      const editor = textEditorRef.current
+      if (!editor) return
+      editor.focus()
+      const len = editor.value.length
+      editor.setSelectionRange(len, len)
+    })
+
+    return () => cancelAnimationFrame(id)
+  }, [textEditor])
 
   const notifyHistory = useCallback(() => {
     onHistoryChange?.({
@@ -159,7 +182,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     return () => ro.disconnect()
   }, [setupCanvas])
 
-  const getPos = (e: PointerEvent | React.PointerEvent): Point => {
+  const getPos = (e: ClientPointEvent): Point => {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
@@ -196,13 +219,13 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     [onDirty, notifyHistory, redraw],
   )
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const handlePointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (textEditor) return
     const p = getPos(e)
     const t = toolRef.current
 
     if (t === "text") {
-      setTextEditor({ x: p.x, y: p.y, value: "" })
+      e.preventDefault()
       return
     }
 
@@ -224,7 +247,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     redraw()
   }
 
-  const handlePointerMove = (e: React.PointerEvent) => {
+  const handlePointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!drawingRef.current) return
     const p = getPos(e)
     if (toolRef.current === "eraser") {
@@ -244,8 +267,14 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     redraw()
   }
 
+  const handleCanvasClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
+    if (toolRef.current !== "text" || textEditor) return
+    const p = getPos(e)
+    setTextEditor({ x: p.x, y: p.y, value: "" })
+  }
+
   const commitText = useCallback(() => {
-    setTextEditor((cur) => {
+    setTextEditor((cur: TextEditorState | null) => {
       if (cur && cur.value.trim()) {
         elementsRef.current.push({
           type: "text",
@@ -273,7 +302,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         height: logicalSizeRef.current.height,
         elements: elementsRef.current,
       }),
-      load: (doc) => {
+      load: (doc: WhiteboardDocument | null) => {
         elementsRef.current = doc?.elements ? structuredClone(doc.elements) : []
         redoRef.current = []
         currentStrokeRef.current = null
@@ -326,14 +355,20 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        onClick={handleCanvasClick}
       />
       {textEditor && (
         <textarea
+          ref={textEditorRef}
           autoFocus
           value={textEditor.value}
-          onChange={(e) => setTextEditor((c) => (c ? { ...c, value: e.target.value } : c))}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            setTextEditor((c: TextEditorState | null) => (c ? { ...c, value: e.target.value } : c))
+          }
           onBlur={commitText}
-          onKeyDown={(e) => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
               e.preventDefault()
               commitText()
