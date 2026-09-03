@@ -107,6 +107,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 
   const [boardSize, setBoardSize] = useState({ width: 1200, height: 800 })
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null)
+  const [resizeActive, setResizeActive] = useState(false)
 
   logicalSizeRef.current = boardSize
 
@@ -322,11 +323,51 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     })
   }, [onDirty, notifyHistory, redraw])
 
+  const updateResize = useCallback((clientX: number, clientY: number) => {
+    if (!resizeRef.current.active) return
+    const { mode, startX, startY, startWidth, startHeight } = resizeRef.current
+    const deltaX = clientX - startX
+    const deltaY = clientY - startY
+    const width = mode === "y" ? startWidth : Math.max(640, Math.round(startWidth + deltaX))
+    const height = mode === "x" ? startHeight : Math.max(420, Math.round(startHeight + deltaY))
+
+    setBoardSize({
+      width: mode === "x" ? startWidth : width,
+      height: mode === "y" ? startHeight : height,
+    })
+    onDirty?.()
+  }, [onDirty])
+
+  const finishResize = useCallback(() => {
+    if (!resizeRef.current.active) return
+    resizeRef.current.active = false
+    setResizeActive(false)
+    redraw()
+    onDirty?.()
+    notifyHistory()
+  }, [notifyHistory, onDirty, redraw])
+
+  useEffect(() => {
+    if (!resizeActive) return
+
+    const onMove = (e: PointerEvent) => updateResize(e.clientX, e.clientY)
+    const onUp = () => finishResize()
+
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+    window.addEventListener("pointercancel", onUp)
+
+    return () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      window.removeEventListener("pointercancel", onUp)
+    }
+  }, [finishResize, resizeActive, updateResize])
+
   const beginResize = useCallback(
     (mode: "x" | "y" | "xy") => (e: ReactPointerEvent<HTMLButtonElement>) => {
       e.preventDefault()
       e.stopPropagation()
-      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
       resizeRef.current = {
         active: true,
         mode,
@@ -335,35 +376,10 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         startWidth: logicalSizeRef.current.width,
         startHeight: logicalSizeRef.current.height,
       }
+      setResizeActive(true)
     },
     [],
   )
-
-  const handleResizeMove = useCallback(
-    (e: ReactPointerEvent<HTMLButtonElement>) => {
-      if (!resizeRef.current.active) return
-      const { mode, startX, startY, startWidth, startHeight } = resizeRef.current
-      const deltaX = e.clientX - startX
-      const deltaY = e.clientY - startY
-      const width = mode === "y" ? startWidth : Math.max(640, Math.round(startWidth + deltaX))
-      const height = mode === "x" ? startHeight : Math.max(420, Math.round(startHeight + deltaY))
-
-      setBoardSize({
-        width: mode === "x" ? startWidth : width,
-        height: mode === "y" ? startHeight : height,
-      })
-      onDirty?.()
-    },
-    [onDirty],
-  )
-
-  const endResize = useCallback(() => {
-    if (!resizeRef.current.active) return
-    resizeRef.current.active = false
-    redraw()
-    onDirty?.()
-    notifyHistory()
-  }, [notifyHistory, onDirty, redraw])
 
   useImperativeHandle(
     ref,
@@ -441,11 +457,8 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
           type="button"
           aria-label="Resize board horizontally"
           title="Drag to extend board horizontally"
-          className="absolute right-[-7px] top-1/2 z-20 flex h-16 w-4 -translate-y-1/2 cursor-col-resize items-center justify-center rounded-full border border-border bg-primary/80 shadow-lg ring-2 ring-white transition hover:bg-primary"
+          className="absolute right-0 top-1/2 z-20 flex h-16 w-5 -translate-y-1/2 translate-x-1/2 cursor-col-resize items-center justify-center rounded-full border border-border bg-primary/80 shadow-lg ring-2 ring-white transition hover:bg-primary"
           onPointerDown={beginResize("x")}
-          onPointerMove={handleResizeMove}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
         >
           <span className="flex h-8 flex-col justify-center gap-1">
             <span className="h-0.5 w-2 rounded-full bg-white/95" />
@@ -457,11 +470,8 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
           type="button"
           aria-label="Resize board vertically"
           title="Drag to extend board vertically"
-          className="absolute bottom-[-7px] left-1/2 z-20 flex h-4 w-16 -translate-x-1/2 cursor-row-resize items-center justify-center rounded-full border border-border bg-primary/80 shadow-lg ring-2 ring-white transition hover:bg-primary"
+          className="absolute bottom-0 left-1/2 z-20 flex h-5 w-16 -translate-x-1/2 translate-y-1/2 cursor-row-resize items-center justify-center rounded-full border border-border bg-primary/80 shadow-lg ring-2 ring-white transition hover:bg-primary"
           onPointerDown={beginResize("y")}
-          onPointerMove={handleResizeMove}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
         >
           <span className="flex w-8 justify-center gap-1">
             <span className="h-2 w-0.5 rounded-full bg-white/95" />
@@ -473,11 +483,8 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
           type="button"
           aria-label="Resize board diagonally"
           title="Drag to extend board down and right"
-          className="absolute bottom-[-8px] right-[-8px] z-20 flex h-5 w-5 cursor-nwse-resize items-center justify-center rounded-md border border-border bg-primary shadow-lg ring-2 ring-white transition hover:scale-105"
+          className="absolute bottom-0 right-0 z-20 flex h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-md border border-border bg-primary shadow-lg ring-2 ring-white transition hover:scale-105"
           onPointerDown={beginResize("xy")}
-          onPointerMove={handleResizeMove}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
         >
           <span className="h-3 w-3 rounded-sm border-b-2 border-r-2 border-white/95" />
         </button>
