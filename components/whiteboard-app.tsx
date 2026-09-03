@@ -254,7 +254,7 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     <div className="flex h-screen flex-col bg-muted/30">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
-        <h1 className="text-base font-semibold text-card-foreground">Teacher Whiteboard</h1>
+        <h1 className="text-base font-semibold text-card-foreground">Whiteboard</h1>
         <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
           <History className="mr-1.5 h-4 w-4" />
           Notes History
