@@ -468,8 +468,8 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
       </div>
 
       {/* Whiteboard */}
-      <div className="relative flex-1 overflow-hidden p-3">
-        <div className="h-full w-full overflow-hidden rounded-lg border border-border shadow-sm">
+      <div className="relative flex-1 overflow-auto p-3">
+        <div className="min-h-full min-w-full rounded-lg border border-border shadow-sm">
           <Whiteboard
             ref={boardRef}
             tool={tool}

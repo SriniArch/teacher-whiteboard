@@ -73,6 +73,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const surfaceRef = useRef<HTMLDivElement>(null)
   const textEditorRef = useRef<HTMLTextAreaElement>(null)
 
   // Persistent drawing state (kept in refs so pointer handlers stay stable).
@@ -81,6 +82,21 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
   const drawingRef = useRef(false)
   const currentStrokeRef = useRef<StrokeElement | null>(null)
   const logicalSizeRef = useRef({ width: 0, height: 0 })
+  const resizeRef = useRef<{
+    active: boolean
+    mode: "x" | "y" | "xy" | null
+    startX: number
+    startY: number
+    startWidth: number
+    startHeight: number
+  }>({
+    active: false,
+    mode: null,
+    startX: 0,
+    startY: 0,
+    startWidth: 0,
+    startHeight: 0,
+  })
 
   const toolRef = useRef(tool)
   const colorRef = useRef(color)
@@ -89,7 +105,10 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
   colorRef.current = color
   sizeRef.current = size
 
+  const [boardSize, setBoardSize] = useState({ width: 1200, height: 800 })
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null)
+
+  logicalSizeRef.current = boardSize
 
   useEffect(() => {
     if (!textEditor) return
@@ -161,9 +180,9 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
-    const rect = container.getBoundingClientRect()
+    const surface = surfaceRef.current
+    if (!canvas || !surface) return
+    const rect = surface.getBoundingClientRect()
     const dpr = window.devicePixelRatio || 1
     logicalSizeRef.current = { width: rect.width, height: rect.height }
     canvas.width = Math.round(rect.width * dpr)
@@ -177,10 +196,20 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 
   useEffect(() => {
     setupCanvas()
-    const ro = new ResizeObserver(() => setupCanvas())
-    if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [setupCanvas])
+  }, [setupCanvas, boardSize])
+
+  useEffect(() => {
+    if (boardSize.width > 0 && boardSize.height > 0) return
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      setBoardSize({
+        width: Math.max(1024, Math.round(rect.width)),
+        height: Math.max(768, Math.round(rect.height)),
+      })
+    }
+  }, [boardSize.height, boardSize.width])
 
   const getPos = (e: ClientPointEvent): Point => {
     const canvas = canvasRef.current!
@@ -293,6 +322,49 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     })
   }, [onDirty, notifyHistory, redraw])
 
+  const beginResize = useCallback(
+    (mode: "x" | "y" | "xy") => (e: ReactPointerEvent<HTMLButtonElement>) => {
+      e.preventDefault()
+      e.stopPropagation()
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      resizeRef.current = {
+        active: true,
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        startWidth: logicalSizeRef.current.width,
+        startHeight: logicalSizeRef.current.height,
+      }
+    },
+    [],
+  )
+
+  const handleResizeMove = useCallback(
+    (e: ReactPointerEvent<HTMLButtonElement>) => {
+      if (!resizeRef.current.active) return
+      const { mode, startX, startY, startWidth, startHeight } = resizeRef.current
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      const width = mode === "y" ? startWidth : Math.max(640, Math.round(startWidth + deltaX))
+      const height = mode === "x" ? startHeight : Math.max(420, Math.round(startHeight + deltaY))
+
+      setBoardSize({
+        width: mode === "x" ? startWidth : width,
+        height: mode === "y" ? startHeight : height,
+      })
+      onDirty?.()
+    },
+    [onDirty],
+  )
+
+  const endResize = useCallback(() => {
+    if (!resizeRef.current.active) return
+    resizeRef.current.active = false
+    redraw()
+    onDirty?.()
+    notifyHistory()
+  }, [notifyHistory, onDirty, redraw])
+
   useImperativeHandle(
     ref,
     () => ({
@@ -306,6 +378,9 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         elementsRef.current = doc?.elements ? structuredClone(doc.elements) : []
         redoRef.current = []
         currentStrokeRef.current = null
+        if (doc?.width && doc?.height) {
+          setBoardSize({ width: doc.width, height: doc.height })
+        }
         redraw()
         notifyHistory()
       },
@@ -346,50 +421,86 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     tool === "text" ? "text" : tool === "eraser" ? "cell" : "crosshair"
 
   return (
-    <div ref={containerRef} className="relative h-full w-full bg-white">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 touch-none"
-        style={{ cursor }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onClick={handleCanvasClick}
-      />
-      {textEditor && (
-        <textarea
-          ref={textEditorRef}
-          autoFocus
-          value={textEditor.value}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setTextEditor((c: TextEditorState | null) => (c ? { ...c, value: e.target.value } : c))
-          }
-          onBlur={commitText}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
-              e.preventDefault()
-              commitText()
-            }
-            if (e.key === "Escape") {
-              e.preventDefault()
-              setTextEditor(null)
-            }
-          }}
-          className="absolute z-10 min-w-[120px] resize-none border border-dashed border-primary/60 bg-transparent p-1 text-foreground outline-none"
-          style={{
-            left: textEditor.x,
-            top: textEditor.y,
-            color,
-            fontSize: Math.max(16, size * 4),
-            lineHeight: 1.2,
-          }}
-          rows={1}
-          placeholder="Type..."
+    <div ref={containerRef} className="relative h-full w-full overflow-auto bg-white">
+      <div
+        ref={surfaceRef}
+        className="relative bg-white"
+        style={{ width: boardSize.width || "100%", height: boardSize.height || "100%" }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 touch-none"
+          style={{ cursor }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onClick={handleCanvasClick}
         />
-      )}
+        <button
+          type="button"
+          aria-label="Resize board horizontally"
+          title="Drag to extend board horizontally"
+          className="absolute right-0 top-1/2 z-10 h-10 w-3 -translate-y-1/2 cursor-col-resize rounded-l-full bg-primary/20 opacity-70 transition hover:opacity-100"
+          onPointerDown={beginResize("x")}
+          onPointerMove={handleResizeMove}
+          onPointerUp={endResize}
+          onPointerCancel={endResize}
+        />
+        <button
+          type="button"
+          aria-label="Resize board vertically"
+          title="Drag to extend board vertically"
+          className="absolute bottom-0 left-1/2 z-10 h-3 w-10 -translate-x-1/2 cursor-row-resize rounded-t-full bg-primary/20 opacity-70 transition hover:opacity-100"
+          onPointerDown={beginResize("y")}
+          onPointerMove={handleResizeMove}
+          onPointerUp={endResize}
+          onPointerCancel={endResize}
+        />
+        <button
+          type="button"
+          aria-label="Resize board diagonally"
+          title="Drag to extend board down and right"
+          className="absolute bottom-0 right-0 z-10 h-4 w-4 cursor-nwse-resize rounded-tl-md bg-primary/35 shadow-sm"
+          onPointerDown={beginResize("xy")}
+          onPointerMove={handleResizeMove}
+          onPointerUp={endResize}
+          onPointerCancel={endResize}
+        />
+        {textEditor && (
+          <textarea
+            ref={textEditorRef}
+            autoFocus
+            value={textEditor.value}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+              setTextEditor((c: TextEditorState | null) => (c ? { ...c, value: e.target.value } : c))
+            }
+            onBlur={commitText}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                e.preventDefault()
+                commitText()
+              }
+              if (e.key === "Escape") {
+                e.preventDefault()
+                setTextEditor(null)
+              }
+            }}
+            className="absolute z-10 min-w-[120px] resize-none border border-dashed border-primary/60 bg-transparent p-1 text-foreground outline-none"
+            style={{
+              left: textEditor.x,
+              top: textEditor.y,
+              color,
+              fontSize: Math.max(16, size * 4),
+              lineHeight: 1.2,
+            }}
+            rows={1}
+            placeholder="Type..."
+          />
+        )}
+      </div>
     </div>
   )
 })
