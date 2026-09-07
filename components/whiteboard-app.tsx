@@ -259,13 +259,10 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
           <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
             <h1 className="text-base font-semibold text-card-foreground">Whiteboard</h1>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
-                <History className="mr-1.5 h-4 w-4" />
-                Notes History
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setChromeOpen(false)}>
-                Hide controls
-              </Button>
+              {noteExists && status === "saved" && (
+                <span className="text-xs text-muted-foreground">Loaded saved notes</span>
+              )}
+              <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
             </div>
           </header>
 
@@ -395,102 +392,96 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
             )}
           </div>
 
-          {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
-            <div className="flex items-center gap-1 rounded-md border border-border p-1">
-              <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
-                <Pencil className="h-4 w-4" />
-              </ToolButton>
-              <ToolButton active={tool === "highlighter"} onClick={() => setTool("highlighter")} label="Highlighter">
-                <Highlighter className="h-4 w-4" />
-              </ToolButton>
-              <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")} label="Eraser">
-                <Eraser className="h-4 w-4" />
-              </ToolButton>
-              <ToolButton active={tool === "text"} onClick={() => setTool("text")} label="Text">
-                <Type className="h-4 w-4" />
-              </ToolButton>
-            </div>
-
-            <div className="flex items-center gap-1">
-              {PEN_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setPenColor(c)
-                    if (tool === "eraser" || tool === "highlighter") setTool("pen")
-                  }}
-                  className={`h-6 w-6 rounded-full border-2 transition ${
-                    penColor === c && tool !== "highlighter" ? "border-ring scale-110" : "border-border"
-                  }`}
-                  style={{ backgroundColor: c }}
-                  aria-label={`Color ${c}`}
-                />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1 rounded-md border border-border p-1">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSize(s)}
-                  className={`flex h-7 w-7 items-center justify-center rounded ${
-                    size === s ? "bg-secondary" : "hover:bg-muted"
-                  }`}
-                  aria-label={`Size ${s}`}
-                >
-                  <span className="rounded-full bg-foreground" style={{ width: s + 2, height: s + 2 }} />
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1 rounded-md border border-border p-1">
-              <ToolButton active={false} disabled={!history.canUndo} onClick={() => boardRef.current?.undo()} label="Undo">
-                <Undo2 className="h-4 w-4" />
-              </ToolButton>
-              <ToolButton active={false} disabled={!history.canRedo} onClick={() => boardRef.current?.redo()} label="Redo">
-                <Redo2 className="h-4 w-4" />
-              </ToolButton>
-            </div>
-
-            <div className="ml-auto flex items-center gap-1.5">
-              <Button variant="outline" size="sm" onClick={handleNew}>
-                New
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleLoad}>
-                Load
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleClear}>
-                Clear
-              </Button>
-              <Button size="sm" onClick={() => persist({ explicit: true })}>
-                <Save className="mr-1.5 h-4 w-4" />
-                Save
-              </Button>
-            </div>
-          </div>
         </>
       )}
 
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
+        <div className="flex items-center gap-1 rounded-md border border-border p-1">
+          <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
+            <Pencil className="h-4 w-4" />
+          </ToolButton>
+          <ToolButton active={tool === "highlighter"} onClick={() => setTool("highlighter")} label="Highlighter">
+            <Highlighter className="h-4 w-4" />
+          </ToolButton>
+          <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")} label="Eraser">
+            <Eraser className="h-4 w-4" />
+          </ToolButton>
+          <ToolButton active={tool === "text"} onClick={() => setTool("text")} label="Text">
+            <Type className="h-4 w-4" />
+          </ToolButton>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {PEN_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                setPenColor(c)
+                if (tool === "eraser" || tool === "highlighter") setTool("pen")
+              }}
+              className={`h-6 w-6 rounded-full border-2 transition ${
+                penColor === c && tool !== "highlighter" ? "border-ring scale-110" : "border-border"
+              }`}
+              style={{ backgroundColor: c }}
+              aria-label={`Color ${c}`}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 rounded-md border border-border p-1">
+          {SIZES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSize(s)}
+              className={`flex h-7 w-7 items-center justify-center rounded ${
+                size === s ? "bg-secondary" : "hover:bg-muted"
+              }`}
+              aria-label={`Size ${s}`}
+            >
+              <span className="rounded-full bg-foreground" style={{ width: s + 2, height: s + 2 }} />
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 rounded-md border border-border p-1">
+          <ToolButton active={false} disabled={!history.canUndo} onClick={() => boardRef.current?.undo()} label="Undo">
+            <Undo2 className="h-4 w-4" />
+          </ToolButton>
+          <ToolButton active={false} disabled={!history.canRedo} onClick={() => boardRef.current?.redo()} label="Redo">
+            <Redo2 className="h-4 w-4" />
+          </ToolButton>
+        </div>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="mr-1.5 h-4 w-4" />
+            History
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setChromeOpen((v) => !v)}>
+            <ChevronDown className={`mr-1.5 h-4 w-4 transition-transform ${chromeOpen ? "" : "-rotate-90"}`} />
+            {chromeOpen ? "Hide details" : "Show details"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleNew}>
+            New
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLoad}>
+            Load
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClear}>
+            Clear
+          </Button>
+          <Button size="sm" onClick={() => persist({ explicit: true })}>
+            <Save className="mr-1.5 h-4 w-4" />
+            Save
+          </Button>
+        </div>
+      </div>
+
       {/* Whiteboard */}
       <div className="relative flex-1 overflow-auto p-3">
-        {!chromeOpen && (
-          <div className="pointer-events-none absolute right-5 top-5 z-20 flex flex-wrap items-center justify-end gap-2">
-            <span className={`pointer-events-auto rounded-full bg-card/95 px-3 py-1 text-xs font-medium shadow-sm ${statusColor}`}>
-              {statusLabel}
-            </span>
-            <Button variant="outline" size="sm" className="pointer-events-auto bg-card/95 shadow-sm" onClick={() => setHistoryOpen(true)}>
-              <History className="mr-1.5 h-4 w-4" />
-              History
-            </Button>
-            <Button variant="outline" size="sm" className="pointer-events-auto bg-card/95 shadow-sm" onClick={() => setChromeOpen(true)}>
-              <ChevronDown className="mr-1.5 h-4 w-4 -rotate-90" />
-              Show controls
-            </Button>
-          </div>
-        )}
         <div className="min-h-full min-w-full rounded-lg border border-border shadow-sm">
           <Whiteboard
             ref={boardRef}
