@@ -163,6 +163,16 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     ctx.fillRect(0, 0, width, height)
     for (const el of elementsRef.current) drawElement(ctx, el)
     if (currentStrokeRef.current) drawElement(ctx, currentStrokeRef.current)
+    
+    // Draw watermark
+    ctx.save()
+    ctx.globalAlpha = 0.15
+    ctx.fillStyle = "#cccccc"
+    ctx.font = "48px Arial"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText("www.techsavyy.com", width / 2, height / 2)
+    ctx.restore()
   }, [drawElement])
 
   const setupCanvas = useCallback(() => {
