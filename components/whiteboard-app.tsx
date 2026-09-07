@@ -237,76 +237,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
   return (
     <div className="relative flex h-screen flex-col bg-muted/30">
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
-        <div className="flex items-center gap-1.5">
-          <select
-            id="student"
-            value={selectedId ?? ""}
-            onChange={(e) => handleSelectStudent(e.target.value)}
-            className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Select student...</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.grade ? ` (${s.grade})` : ""}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setStudentDialog({ open: true, editing: null })}
-            title="Add student"
-          >
-            <UserPlus className="h-4 w-4" />
-          </Button>
-          {selectedStudent && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
-                title="Edit student"
-              >
-                <PencilEdit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-        </div>
-
-        <input
-          id="date"
-          type="date"
-          value={date}
-          onChange={(e) => handleDateChange(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-        />
-
-        <input
-          id="subject"
-          value={subject}
-          onChange={(e) => {
-            setSubject(e.target.value)
-            markDirty()
-          }}
-          placeholder="Subject"
-          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-        />
-
-        <input
-          id="topic"
-          value={topic}
-          onChange={(e) => {
-            setTopic(e.target.value)
-            markDirty()
-          }}
-          placeholder="Topic"
-          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-        />
-
         <div className="flex items-center gap-1 rounded-md border border-border p-1">
           <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
             <Pencil className="h-4 w-4" />
@@ -386,6 +316,76 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
             Save
           </Button>
         </div>
+
+        <div className="flex items-center gap-1.5">
+          <select
+            id="student"
+            value={selectedId ?? ""}
+            onChange={(e) => handleSelectStudent(e.target.value)}
+            className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Select student...</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {s.grade ? ` (${s.grade})` : ""}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStudentDialog({ open: true, editing: null })}
+            title="Add student"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          {selectedStudent && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
+                title="Edit student"
+              >
+                <PencilEdit className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+
+        <input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => handleDateChange(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        <input
+          id="subject"
+          value={subject}
+          onChange={(e) => {
+            setSubject(e.target.value)
+            markDirty()
+          }}
+          placeholder="Subject"
+          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        <input
+          id="topic"
+          value={topic}
+          onChange={(e) => {
+            setTopic(e.target.value)
+            markDirty()
+          }}
+          placeholder="Topic"
+          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
       </div>
 
       <div className="relative flex-1 overflow-auto p-3">
