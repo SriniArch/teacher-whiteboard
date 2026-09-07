@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Whiteboard, type Tool, type WhiteboardDocument, type WhiteboardHandle } from "@/components/whiteboard"
 import type { Student } from "@/lib/db/schema"
 import {
-  ChevronDown,
   Eraser,
   Highlighter,
   History,
@@ -35,16 +34,6 @@ function todayISO() {
   return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10)
 }
 
-function formatDisplayDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-}
-
 export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] }) {
   const [students, setStudents] = useState<Student[]>(initialStudents)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -67,8 +56,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     editing: null,
   })
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [chromeOpen, setChromeOpen] = useState(false)
-  const [controlsOpen, setControlsOpen] = useState(true)
 
   const boardRef = useRef<WhiteboardHandle>(null)
   const dirtyRef = useRef(false)
@@ -81,7 +68,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
 
   const activeColor = tool === "highlighter" ? HIGHLIGHTER_COLOR : penColor
 
-  // Restore last-selected student for the session.
   useEffect(() => {
     const stored = sessionStorage.getItem("wb:lastStudent")
     if (stored && students.some((s) => s.id === Number(stored))) {
@@ -100,7 +86,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     setStatus("saved")
   }, [])
 
-  // Load note whenever student or date changes.
   useEffect(() => {
     if (selectedId == null) {
       setNoteExists(false)
@@ -110,7 +95,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     loadNoteFor(selectedId, date)
   }, [selectedId, date, loadNoteFor])
 
-  // Warn before leaving with unsaved changes.
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (dirtyRef.current) {
@@ -240,7 +224,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     setHistoryOpen(false)
     setSelectedId(row.studentId)
     setDate(row.date)
-    // Effect will load the note for this student + date.
   }
 
   const statusLabel = status === "saving" ? "Saving..." : status === "unsaved" ? "Unsaved changes" : "Saved"
@@ -253,150 +236,77 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
 
   return (
     <div className="relative flex h-screen flex-col bg-muted/30">
-      {chromeOpen && (
-        <>
-          {/* Header */}
-          <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
-            <h1 className="text-base font-semibold text-card-foreground">Whiteboard</h1>
-            <div className="flex items-center gap-2">
-              {noteExists && status === "saved" && (
-                <span className="text-xs text-muted-foreground">Loaded saved notes</span>
-              )}
-              <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
-            </div>
-          </header>
-
-          {/* Controls */}
-          <div className="border-b border-border bg-card">
-            <div className="flex items-center gap-2 px-4 py-2">
-              <button
-                type="button"
-                onClick={() => setControlsOpen((v) => !v)}
-                aria-expanded={controlsOpen}
-                className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-card-foreground transition hover:bg-muted"
-              >
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${controlsOpen ? "" : "-rotate-90"}`}
-                />
-                Lesson details
-              </button>
-              {!controlsOpen && (
-                <span className="truncate text-xs text-muted-foreground">
-                  {selectedStudent ? selectedStudent.name : "No student"}
-                  {" · "}
-                  {formatDisplayDate(date)}
-                  {subject ? ` · ${subject}` : ""}
-                  {topic ? ` · ${topic}` : ""}
-                </span>
-              )}
-              <div className="ml-auto flex items-center gap-2">
-                {noteExists && status === "saved" && (
-                  <span className="text-xs text-muted-foreground">Loaded saved notes</span>
-                )}
-                <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
-              </div>
-            </div>
-
-            {controlsOpen && (
-              <div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-4 pb-2.5">
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="student" className="text-xs font-medium text-muted-foreground">
-                    Student
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <select
-                      id="student"
-                      value={selectedId ?? ""}
-                      onChange={(e) => handleSelectStudent(e.target.value)}
-                      className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">Select student...</option>
-                      {students.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                          {s.grade ? ` (${s.grade})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setStudentDialog({ open: true, editing: null })}
-                      title="Add student"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                    {selectedStudent && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
-                          title="Edit student"
-                        >
-                          <PencilEdit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="date" className="text-xs font-medium text-muted-foreground">
-                    Date
-                  </label>
-                  <input
-                    id="date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => handleDateChange(e.target.value)}
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="subject" className="text-xs font-medium text-muted-foreground">
-                    Subject
-                  </label>
-                  <input
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => {
-                      setSubject(e.target.value)
-                      markDirty()
-                    }}
-                    placeholder="Optional"
-                    className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="topic" className="text-xs font-medium text-muted-foreground">
-                    Topic
-                  </label>
-                  <input
-                    id="topic"
-                    value={topic}
-                    onChange={(e) => {
-                      setTopic(e.target.value)
-                      markDirty()
-                    }}
-                    placeholder="Optional"
-                    className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-        </>
-      )}
-
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
+        <div className="flex items-center gap-1.5">
+          <select
+            id="student"
+            value={selectedId ?? ""}
+            onChange={(e) => handleSelectStudent(e.target.value)}
+            className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Select student...</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {s.grade ? ` (${s.grade})` : ""}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStudentDialog({ open: true, editing: null })}
+            title="Add student"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          {selectedStudent && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
+                title="Edit student"
+              >
+                <PencilEdit className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+
+        <input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => handleDateChange(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        <input
+          id="subject"
+          value={subject}
+          onChange={(e) => {
+            setSubject(e.target.value)
+            markDirty()
+          }}
+          placeholder="Subject"
+          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
+
+        <input
+          id="topic"
+          value={topic}
+          onChange={(e) => {
+            setTopic(e.target.value)
+            markDirty()
+          }}
+          placeholder="Topic"
+          className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+        />
+
         <div className="flex items-center gap-1 rounded-md border border-border p-1">
           <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
             <Pencil className="h-4 w-4" />
@@ -456,13 +366,11 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {noteExists && status === "saved" && <span className="text-xs text-muted-foreground">Loaded saved notes</span>}
+          <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
           <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
             <History className="mr-1.5 h-4 w-4" />
             History
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setChromeOpen((v) => !v)}>
-            <ChevronDown className={`mr-1.5 h-4 w-4 transition-transform ${chromeOpen ? "" : "-rotate-90"}`} />
-            {chromeOpen ? "Hide details" : "Show details"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleNew}>
             New
@@ -480,7 +388,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
         </div>
       </div>
 
-      {/* Whiteboard */}
       <div className="relative flex-1 overflow-auto p-3">
         <div className="min-h-full min-w-full rounded-lg border border-border shadow-sm">
           <Whiteboard
