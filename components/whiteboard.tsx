@@ -90,7 +90,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
   colorRef.current = color
   sizeRef.current = size
 
-  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 })
+  const [boardSize, setBoardSize] = useState({ width: 1200, height: 800 })
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null)
 
@@ -345,7 +345,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         if (doc?.width && doc?.height) {
           setBoardSize({ width: doc.width, height: doc.height })
         } else {
-          setBoardSize({ width: 0, height: 0 })
+          setBoardSize({ width: 1200, height: 800 })
         }
         redraw()
         notifyHistory()
