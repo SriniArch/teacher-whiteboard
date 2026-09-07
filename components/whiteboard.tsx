@@ -90,10 +90,12 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
   colorRef.current = color
   sizeRef.current = size
 
-  const [boardSize, setBoardSize] = useState({ width: 1200, height: 800 })
+  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 })
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null)
 
-  logicalSizeRef.current = boardSize
+  const surfaceWidth = Math.max(boardSize.width, containerSize.width)
+  const surfaceHeight = Math.max(boardSize.height, containerSize.height)
 
   useEffect(() => {
     if (!textEditor) return
@@ -181,20 +183,25 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
 
   useEffect(() => {
     setupCanvas()
-  }, [setupCanvas, boardSize])
+  }, [setupCanvas, surfaceWidth, surfaceHeight])
 
   useEffect(() => {
-    if (boardSize.width > 0 && boardSize.height > 0) return
     const container = containerRef.current
     if (!container) return
-    const rect = container.getBoundingClientRect()
-    if (rect.width > 0 && rect.height > 0) {
-      setBoardSize({
-        width: Math.max(1024, Math.round(rect.width)),
-        height: Math.max(768, Math.round(rect.height)),
-      })
+
+    const syncContainerSize = () => {
+      const rect = container.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      setContainerSize({ width: Math.round(rect.width), height: Math.round(rect.height) })
     }
-  }, [boardSize.height, boardSize.width])
+
+    syncContainerSize()
+
+    const observer = new ResizeObserver(syncContainerSize)
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [])
 
   const getPos = (e: ClientPointEvent): Point => {
     const canvas = canvasRef.current!
@@ -337,6 +344,8 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
         currentStrokeRef.current = null
         if (doc?.width && doc?.height) {
           setBoardSize({ width: doc.width, height: doc.height })
+        } else {
+          setBoardSize({ width: 0, height: 0 })
         }
         redraw()
         notifyHistory()
@@ -382,7 +391,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
       <div
         ref={surfaceRef}
         className="relative bg-white"
-        style={{ width: boardSize.width || "100%", height: boardSize.height || "100%" }}
+        style={{ width: surfaceWidth || "100%", height: surfaceHeight || "100%" }}
       >
         <canvas
           ref={canvasRef}
