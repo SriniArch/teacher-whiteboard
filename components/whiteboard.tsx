@@ -378,7 +378,7 @@ export const Whiteboard = forwardRef<WhiteboardHandle, Props>(function Whiteboar
     tool === "text" ? "text" : tool === "eraser" ? "cell" : "crosshair"
 
   return (
-    <div ref={containerRef} className="relative h-full w-full overflow-auto bg-white">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden bg-white">
       <div
         ref={surfaceRef}
         className="relative bg-white"

@@ -67,6 +67,7 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
     editing: null,
   })
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [chromeOpen, setChromeOpen] = useState(false)
   const [controlsOpen, setControlsOpen] = useState(true)
 
   const boardRef = useRef<WhiteboardHandle>(null)
@@ -251,224 +252,245 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
         : "text-green-600"
 
   return (
-    <div className="flex h-screen flex-col bg-muted/30">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
-        <h1 className="text-base font-semibold text-card-foreground">Whiteboard</h1>
-        <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
-          <History className="mr-1.5 h-4 w-4" />
-          Notes History
-        </Button>
-      </header>
+    <div className="relative flex h-screen flex-col bg-muted/30">
+      {chromeOpen && (
+        <>
+          {/* Header */}
+          <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
+            <h1 className="text-base font-semibold text-card-foreground">Whiteboard</h1>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+                <History className="mr-1.5 h-4 w-4" />
+                Notes History
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setChromeOpen(false)}>
+                Hide controls
+              </Button>
+            </div>
+          </header>
 
-      {/* Controls */}
-      <div className="border-b border-border bg-card">
-        <div className="flex items-center gap-2 px-4 py-2">
-          <button
-            type="button"
-            onClick={() => setControlsOpen((v) => !v)}
-            aria-expanded={controlsOpen}
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-card-foreground transition hover:bg-muted"
-          >
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${controlsOpen ? "" : "-rotate-90"}`}
-            />
-            Lesson details
-          </button>
-          {!controlsOpen && (
-            <span className="truncate text-xs text-muted-foreground">
-              {selectedStudent ? selectedStudent.name : "No student"}
-              {" · "}
-              {formatDisplayDate(date)}
-              {subject ? ` · ${subject}` : ""}
-              {topic ? ` · ${topic}` : ""}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            {noteExists && status === "saved" && (
-              <span className="text-xs text-muted-foreground">Loaded saved notes</span>
+          {/* Controls */}
+          <div className="border-b border-border bg-card">
+            <div className="flex items-center gap-2 px-4 py-2">
+              <button
+                type="button"
+                onClick={() => setControlsOpen((v) => !v)}
+                aria-expanded={controlsOpen}
+                className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-card-foreground transition hover:bg-muted"
+              >
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${controlsOpen ? "" : "-rotate-90"}`}
+                />
+                Lesson details
+              </button>
+              {!controlsOpen && (
+                <span className="truncate text-xs text-muted-foreground">
+                  {selectedStudent ? selectedStudent.name : "No student"}
+                  {" · "}
+                  {formatDisplayDate(date)}
+                  {subject ? ` · ${subject}` : ""}
+                  {topic ? ` · ${topic}` : ""}
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-2">
+                {noteExists && status === "saved" && (
+                  <span className="text-xs text-muted-foreground">Loaded saved notes</span>
+                )}
+                <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+              </div>
+            </div>
+
+            {controlsOpen && (
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-4 pb-2.5">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="student" className="text-xs font-medium text-muted-foreground">
+                    Student
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      id="student"
+                      value={selectedId ?? ""}
+                      onChange={(e) => handleSelectStudent(e.target.value)}
+                      className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Select student...</option>
+                      {students.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                          {s.grade ? ` (${s.grade})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setStudentDialog({ open: true, editing: null })}
+                      title="Add student"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                    {selectedStudent && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
+                          title="Edit student"
+                        >
+                          <PencilEdit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="date" className="text-xs font-medium text-muted-foreground">
+                    Date
+                  </label>
+                  <input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="subject" className="text-xs font-medium text-muted-foreground">
+                    Subject
+                  </label>
+                  <input
+                    id="subject"
+                    value={subject}
+                    onChange={(e) => {
+                      setSubject(e.target.value)
+                      markDirty()
+                    }}
+                    placeholder="Optional"
+                    className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="topic" className="text-xs font-medium text-muted-foreground">
+                    Topic
+                  </label>
+                  <input
+                    id="topic"
+                    value={topic}
+                    onChange={(e) => {
+                      setTopic(e.target.value)
+                      markDirty()
+                    }}
+                    placeholder="Optional"
+                    className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
             )}
-            <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
           </div>
-        </div>
 
-        {controlsOpen && (
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-4 pb-2.5">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="student" className="text-xs font-medium text-muted-foreground">
-                Student
-              </label>
-          <div className="flex items-center gap-1.5">
-            <select
-              id="student"
-              value={selectedId ?? ""}
-              onChange={(e) => handleSelectStudent(e.target.value)}
-              className="h-9 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Select student...</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                  {s.grade ? ` (${s.grade})` : ""}
-                </option>
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
+            <div className="flex items-center gap-1 rounded-md border border-border p-1">
+              <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
+                <Pencil className="h-4 w-4" />
+              </ToolButton>
+              <ToolButton active={tool === "highlighter"} onClick={() => setTool("highlighter")} label="Highlighter">
+                <Highlighter className="h-4 w-4" />
+              </ToolButton>
+              <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")} label="Eraser">
+                <Eraser className="h-4 w-4" />
+              </ToolButton>
+              <ToolButton active={tool === "text"} onClick={() => setTool("text")} label="Text">
+                <Type className="h-4 w-4" />
+              </ToolButton>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {PEN_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setPenColor(c)
+                    if (tool === "eraser" || tool === "highlighter") setTool("pen")
+                  }}
+                  className={`h-6 w-6 rounded-full border-2 transition ${
+                    penColor === c && tool !== "highlighter" ? "border-ring scale-110" : "border-border"
+                  }`}
+                  style={{ backgroundColor: c }}
+                  aria-label={`Color ${c}`}
+                />
               ))}
-            </select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setStudentDialog({ open: true, editing: null })}
-              title="Add student"
-            >
-              <UserPlus className="h-4 w-4" />
-            </Button>
-            {selectedStudent && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStudentDialog({ open: true, editing: selectedStudent })}
-                  title="Edit student"
+            </div>
+
+            <div className="flex items-center gap-1 rounded-md border border-border p-1">
+              {SIZES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSize(s)}
+                  className={`flex h-7 w-7 items-center justify-center rounded ${
+                    size === s ? "bg-secondary" : "hover:bg-muted"
+                  }`}
+                  aria-label={`Size ${s}`}
                 >
-                  <PencilEdit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleDeleteStudent} title="Delete student">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
+                  <span className="rounded-full bg-foreground" style={{ width: s + 2, height: s + 2 }} />
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 rounded-md border border-border p-1">
+              <ToolButton active={false} disabled={!history.canUndo} onClick={() => boardRef.current?.undo()} label="Undo">
+                <Undo2 className="h-4 w-4" />
+              </ToolButton>
+              <ToolButton active={false} disabled={!history.canRedo} onClick={() => boardRef.current?.redo()} label="Redo">
+                <Redo2 className="h-4 w-4" />
+              </ToolButton>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1.5">
+              <Button variant="outline" size="sm" onClick={handleNew}>
+                New
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLoad}>
+                Load
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClear}>
+                Clear
+              </Button>
+              <Button size="sm" onClick={() => persist({ explicit: true })}>
+                <Save className="mr-1.5 h-4 w-4" />
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="date" className="text-xs font-medium text-muted-foreground">
-            Date
-          </label>
-          <input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => handleDateChange(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="subject" className="text-xs font-medium text-muted-foreground">
-            Subject
-          </label>
-          <input
-            id="subject"
-            value={subject}
-            onChange={(e) => {
-              setSubject(e.target.value)
-              markDirty()
-            }}
-            placeholder="Optional"
-            className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="topic" className="text-xs font-medium text-muted-foreground">
-            Topic
-          </label>
-          <input
-            id="topic"
-            value={topic}
-            onChange={(e) => {
-              setTopic(e.target.value)
-              markDirty()
-            }}
-            placeholder="Optional"
-            className="h-9 w-36 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-          </div>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
-        <div className="flex items-center gap-1 rounded-md border border-border p-1">
-          <ToolButton active={tool === "pen"} onClick={() => setTool("pen")} label="Pen">
-            <Pencil className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton active={tool === "highlighter"} onClick={() => setTool("highlighter")} label="Highlighter">
-            <Highlighter className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")} label="Eraser">
-            <Eraser className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton active={tool === "text"} onClick={() => setTool("text")} label="Text">
-            <Type className="h-4 w-4" />
-          </ToolButton>
-        </div>
-
-        {/* Colors */}
-        <div className="flex items-center gap-1">
-          {PEN_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => {
-                setPenColor(c)
-                if (tool === "eraser" || tool === "highlighter") setTool("pen")
-              }}
-              className={`h-6 w-6 rounded-full border-2 transition ${
-                penColor === c && tool !== "highlighter" ? "border-ring scale-110" : "border-border"
-              }`}
-              style={{ backgroundColor: c }}
-              aria-label={`Color ${c}`}
-            />
-          ))}
-        </div>
-
-        {/* Sizes */}
-        <div className="flex items-center gap-1 rounded-md border border-border p-1">
-          {SIZES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSize(s)}
-              className={`flex h-7 w-7 items-center justify-center rounded ${
-                size === s ? "bg-secondary" : "hover:bg-muted"
-              }`}
-              aria-label={`Size ${s}`}
-            >
-              <span className="rounded-full bg-foreground" style={{ width: s + 2, height: s + 2 }} />
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1 rounded-md border border-border p-1">
-          <ToolButton active={false} disabled={!history.canUndo} onClick={() => boardRef.current?.undo()} label="Undo">
-            <Undo2 className="h-4 w-4" />
-          </ToolButton>
-          <ToolButton active={false} disabled={!history.canRedo} onClick={() => boardRef.current?.redo()} label="Redo">
-            <Redo2 className="h-4 w-4" />
-          </ToolButton>
-        </div>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={handleNew}>
-            New
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleLoad}>
-            Load
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleClear}>
-            Clear
-          </Button>
-          <Button size="sm" onClick={() => persist({ explicit: true })}>
-            <Save className="mr-1.5 h-4 w-4" />
-            Save
-          </Button>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Whiteboard */}
       <div className="relative flex-1 overflow-auto p-3">
+        {!chromeOpen && (
+          <div className="pointer-events-none absolute right-5 top-5 z-20 flex flex-wrap items-center justify-end gap-2">
+            <span className={`pointer-events-auto rounded-full bg-card/95 px-3 py-1 text-xs font-medium shadow-sm ${statusColor}`}>
+              {statusLabel}
+            </span>
+            <Button variant="outline" size="sm" className="pointer-events-auto bg-card/95 shadow-sm" onClick={() => setHistoryOpen(true)}>
+              <History className="mr-1.5 h-4 w-4" />
+              History
+            </Button>
+            <Button variant="outline" size="sm" className="pointer-events-auto bg-card/95 shadow-sm" onClick={() => setChromeOpen(true)}>
+              <ChevronDown className="mr-1.5 h-4 w-4 -rotate-90" />
+              Show controls
+            </Button>
+          </div>
+        )}
         <div className="min-h-full min-w-full rounded-lg border border-border shadow-sm">
           <Whiteboard
             ref={boardRef}
@@ -480,12 +502,6 @@ export function WhiteboardApp({ initialStudents }: { initialStudents: Student[] 
           />
         </div>
       </div>
-
-      {/* Footer status */}
-      <footer className="flex items-center justify-between border-t border-border bg-card px-4 py-1.5 text-xs text-muted-foreground">
-        <span>{selectedStudent ? `${selectedStudent.name} · ${formatDisplayDate(date)}` : formatDisplayDate(date)}</span>
-        <span className={statusColor}>{statusLabel}</span>
-      </footer>
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md bg-foreground px-4 py-2 text-sm text-background shadow-lg">
